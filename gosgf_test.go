@@ -1,4 +1,4 @@
-package gosgf
+package main
 
 import "testing"
 

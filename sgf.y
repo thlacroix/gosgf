@@ -22,65 +22,80 @@ import (
 	"strconv"
 	"os"
 	"unicode/utf8"
-
-	"github.com/thlacroix/gosgf"
 )
+
+var collection *Collection
 
 %}
 
 %union {
-	GameTree *gosgf.GameTree
-	Sequence *gosgf.Sequence
-	Node *gosgf.Node
-	Property *gosgf.Property
+	collection *Collection
+	gametree *GameTree
+	sequence *Sequence
+	node *Node
+	property *Property
 	num int
 }
 
-%type	<GameTree> GameTree
-%type <Node> Node
-%type <Sequence> Sequence
-%type <Property> Property
-%type <num> PropIndent PropValue
+%type <collection> collection
+%type	<gametree> gametree
+%type <node> node
+%type <sequence> sequence
+%type <property> property
+%type <num> propindent propvalue
 
 %token ';' '(' ')'
 
 %token	<num>	NUM
 
 %%
-
-GameTree:
-	'(' Sequence ')'
+collection:
+	gametree
 	{
-		$$ = &gosgf.GameTree{Sequence: $2}
-		fmt.Println($$)
+		$$ = &Collection{GameTrees: []*GameTree{$1}}
+	}
+| collection gametree
+	{
+		$$ = $1.AddGameTree($2)
+		collection = $$
 	}
 
-Sequence:
-	Node
+gametree:
+	'(' sequence ')'
 	{
-		$$ = &gosgf.Sequence{Nodes: []*gosgf.Node{$1}}
+		$$ = &GameTree{Sequence: $2}
 	}
-| Sequence Node
+| '(' sequence collection ')'
+	{
+		$$ = &GameTree{Sequence: $2, GameTrees: $3.GameTrees}
+	}
+
+sequence:
+	node
+	{
+		$$ = &Sequence{Nodes: []*Node{$1}}
+	}
+| sequence node
 	{
 		$$ = $1.AddNode($2)
 	}
 
-Node:
-	';' Property
+node:
+	';' property
 	{
-		$$ = &gosgf.Node{$2}
+		$$ = &Node{$2}
 	}
 
-Property:
-	PropIndent PropValue
+property:
+	propindent propvalue
 	{
-		$$ = &gosgf.Property{$1, $2}
+		$$ = &Property{$1, $2}
 	}
 
-PropIndent:
+propindent:
 	 NUM
 
-PropValue:
+propvalue:
 	'[' NUM ']'
 	{
 		$$ = $2
@@ -189,5 +204,6 @@ func main() {
 		}
 
 		sgfParse(&exprLex{line: line})
+		fmt.Println(collection)
 	}
 }
